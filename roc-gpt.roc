@@ -42,25 +42,16 @@ main =
     Task.loop! { model, apiKey, previousMessages: [systemMessage] } proompt
     Stdout.line "\nAssistant: Goodbye! ^_^"
 
-proompt = \{ model, apiKey, previousMessages } -> 
-    handleResponse : List Message, Http.Response -> Result [Step (List Message)] _
-    handleResponse = \messages, response ->
-        responseBody =
-            when response |> Http.handleStringResponse is
-                Err err -> crash (Http.errorToString err)
-                Ok body -> body |> Str.toUtf8
-        decoder = Json.utf8With { fieldNameMapping: SnakeCase }
-        decoded : Decode.DecodeResult ApiResponse
-        decoded = Decode.fromBytesPartial responseBody decoder
-        when decoded.result is
-            Ok body ->
-                when List.get body.choices 0 is
-                    Ok choice -> 
-                        updatedMessages = List.append messages choice.message
-                        Ok (Step updatedMessages)
-                    Err _ -> Err "Error getting first choice"
-            Err _ -> Err "Error decoding response"
+systemMessage = {
+    role: "system",
+    content: "You are a helpful assistant, who answers questions in a concise and friendly manner. If you do not have knowledge about the on the users inquires about, you should politely tell them you cannot help.",
+}
 
+
+## The main loop for the chatbot
+## This function prompts the user for input, sends the input to the OpenRouter API, and prints the response
+## This will continue until the user types quit, exit, goodbye, or goodbye!
+proompt = \{ model, apiKey, previousMessages } -> 
     Stdout.write! "You: "
     query = Stdin.line!
     when query |> strToLower is
@@ -84,11 +75,27 @@ proompt = \{ model, apiKey, previousMessages } ->
                 Err _ -> Task.err ErrorHandlingResponse
 
 
-systemMessage = {
-    role: "system",
-    content: "You are a helpful assistant, who answers questions in a concise and friendly manner. If you do not have knowledge about the on the users inquires about, you should politely tell them you cannot help.",
-}
+## decode the response from the OpenRouter API and append the first message to the list of messages
+handleResponse : List Message, Http.Response -> Result [Step (List Message)] _
+handleResponse = \messages, response ->
+    responseBody =
+        when response |> Http.handleStringResponse is
+            Err err -> crash (Http.errorToString err)
+            Ok body -> body |> Str.toUtf8
+    decoder = Json.utf8With { fieldNameMapping: SnakeCase }
+    decoded : Decode.DecodeResult ApiResponse
+    decoded = Decode.fromBytesPartial responseBody decoder
+    when decoded.result is
+        Ok body ->
+            when List.get body.choices 0 is
+                Ok choice -> 
+                    updatedMessages = List.append messages choice.message
+                    Ok (Step updatedMessages)
+                Err _ -> Err "Error getting first choice"
+        Err _ -> Err "Error decoding response"
 
+
+## Build the request object for the OpenRouter API
 buildRequest : Str, Str, List Message -> Http.Request
 buildRequest = \apiKey, model, messages ->
     { Http.defaultRequest &
@@ -99,9 +106,11 @@ buildRequest = \apiKey, model, messages ->
         url: "https://openrouter.ai/api/v1/chat/completions",
         mimeType: "application/json",
         body: buildRequestBody model messages,
-        timeout: TimeoutMilliseconds 100_000,
+        timeout: TimeoutMilliseconds (60 * 1000),
     }
 
+
+## Build the request body for the OpenRouter API (or any OpenAI style API)
 buildRequestBody : Str, List Message -> List U8
 buildRequestBody = \model, messages ->
     messagesStr =
@@ -110,24 +119,34 @@ buildRequestBody = \model, messages ->
         |> Str.joinWith ", "
     "{ \"model\": \"$(model)\", \"messages\": [ $(messagesStr) ] }" |> Str.toUtf8
 
+
+## Prompt the user to choose a model and return the selected model
 getModelChoice : Task Str _
 getModelChoice =
-    Stdout.line! menuString
+    Stdout.line! modelMenuString
     Stdout.write! "Choose a model (or press enter): "
     choiceStr <- Stdin.line |> Task.map
-    Dict.get menuChoices choiceStr
-    |> Result.withDefault "mistralai/mistral-small"
+    Dict.get modelChoices choiceStr
+    |> Result.withDefault defaultModel
 
-menuChoices =
+
+## The default model selection
+defaultModel = "mistralai/mistral-small"
+
+
+## Define the model choices
+modelChoices =
     Dict.empty {}
-    |> Dict.insert "1" "mistralai/mistral-small"
+    |> Dict.insert "1" defaultModel
     |> Dict.insert "2" "mistralai/mistral-large"
     |> Dict.insert "3" "openai/gpt-3.5-turbo"
     |> Dict.insert "4" "openai/gpt-4-turbo"
     |> Dict.insert "5" "microsoft/wizardlm-2-8x22b"
 
-menuString =
-    menuChoices 
+
+## Generate a string to print for the model selection menu
+modelMenuString =
+    modelChoices 
     |> Dict.walk "" \string, key, value -> 
         string 
         |> Str.concat key 
@@ -135,6 +154,8 @@ menuString =
         |> Str.concat value 
         |> Str.concat (if key == "1" then " (default)\n" else "\n")
 
+
+## Convert a string to lowercase
 strToLower : Str -> Str
 strToLower = \str ->
     str 
