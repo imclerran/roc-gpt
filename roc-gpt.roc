@@ -10,8 +10,12 @@ import cli.Stdout
 import cli.Stdin
 import json.Json
 
+## Message object for interacting with an AI model
+## `role`: "system", "user", or "assistant"
+## `content`: The text content of the message
 Message : { role : Str, content : Str }
 
+## An object representing the response from the OpenRouter API
 ApiResponse : {
     id : Str,
     model : Str,
@@ -30,18 +34,25 @@ ApiResponse : {
     },
 }
 
+
 main =
-    keyResult <- Task.attempt (Env.var "OPENROUTER_API_KEY")
-    apiKey =
-        when keyResult is
-            Ok key -> key
-            Err VarNotFound -> crash "OPENROUTER_API_KEY environment variable not set"
+    apiKey = getApiKey!
     model = getModelChoice!
     Stdout.line! "Using model: $(model)\n"
-
+    Stdout.line! "Enter your questions below, or type 'Goodbye' to exit"
     Task.loop! { model, apiKey, previousMessages: [systemMessage] } proompt
-    Stdout.line "\nAssistant: Goodbye! ^_^"
+    Stdout.line "\nAssistant: I have been a good chatbot. Goodbye! ^_^"
 
+
+## Get the OpenRouter API key from environment variables
+getApiKey =
+    keyResult <- Task.attempt (Env.var "OPENROUTER_API_KEY")
+    when keyResult is
+        Ok key -> Task.ok key
+        Err VarNotFound -> crash "OPENROUTER_API_KEY environment variable not set"
+
+
+## The system prompt sent to the chatbot to give it some instruction on how to respond.
 systemMessage = {
     role: "system",
     content: "You are a helpful assistant, who answers questions in a concise and friendly manner. If you do not have knowledge about the on the users inquires about, you should politely tell them you cannot help.",
@@ -139,9 +150,10 @@ modelChoices =
     Dict.empty {}
     |> Dict.insert "1" defaultModel
     |> Dict.insert "2" "mistralai/mistral-large"
-    |> Dict.insert "3" "openai/gpt-3.5-turbo"
-    |> Dict.insert "4" "openai/gpt-4-turbo"
-    |> Dict.insert "5" "microsoft/wizardlm-2-8x22b"
+    |> Dict.insert "3" "microsoft/wizardlm-2-8x22b:nitro"
+    |> Dict.insert "4" "openai/gpt-3.5-turbo"
+    |> Dict.insert "5" "openai/gpt-4-turbo"
+    
 
 
 ## Generate a string to print for the model selection menu
