@@ -3,11 +3,11 @@ app [main] {
     json: "https://github.com/lukewilliamboswell/roc-json/releases/download/0.9.0/JI4BuuOuWnD1R3Xcx-F8VrWdj-LM_FfDRB00ekYjIIQ.tar.br",
 }
 
-import cli.Http
 import cli.Env
-import cli.Task exposing [Task]
+import cli.Http
 import cli.Stdout
 import cli.Stdin
+import cli.Task exposing [Task]
 import json.Json
 
 ## Message object for interacting with an AI model
@@ -69,6 +69,7 @@ proompt = \{ model, apiKey, previousMessages } ->
         "quit" -> Task.ok (Done {apiKey, model, previousMessages})
         "exit" -> Task.ok (Done {apiKey, model, previousMessages})
         "goodbye" -> Task.ok (Done {apiKey, model, previousMessages})
+        "goodbye." -> Task.ok (Done {apiKey, model, previousMessages})
         "goodbye!" -> Task.ok (Done {apiKey, model, previousMessages})
         _ ->
             messages = List.append previousMessages { role: "user", content: query }
@@ -153,6 +154,8 @@ modelChoices =
     |> Dict.insert "3" "microsoft/wizardlm-2-8x22b:nitro"
     |> Dict.insert "4" "openai/gpt-3.5-turbo"
     |> Dict.insert "5" "openai/gpt-4-turbo"
+    |> Dict.insert "6" "google/gemini-pro-1.5"
+    |> Dict.insert "7" "meta-llama/llama-3-8b-instruct:free"
     
 
 
