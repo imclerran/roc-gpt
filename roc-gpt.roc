@@ -143,21 +143,20 @@ getModelChoice =
 
 
 ## The default model selection
-defaultModel = "mistralai/mistral-small"
+defaultModel = "meta-llama/llama-3-8b-instruct:free"
 
 
 ## Define the model choices
 modelChoices =
     Dict.empty {}
     |> Dict.insert "1" defaultModel
-    |> Dict.insert "2" "mistralai/mistral-large"
-    |> Dict.insert "3" "microsoft/wizardlm-2-8x22b:nitro"
-    |> Dict.insert "4" "openai/gpt-3.5-turbo"
-    |> Dict.insert "5" "openai/gpt-4-turbo"
-    |> Dict.insert "6" "google/gemini-pro-1.5"
-    |> Dict.insert "7" "meta-llama/llama-3-8b-instruct:free"
+    |> Dict.insert "2" "mistralai/mistral-small"
+    |> Dict.insert "3" "mistralai/mistral-large"
+    |> Dict.insert "4" "microsoft/wizardlm-2-8x22b:nitro"
+    |> Dict.insert "5" "openai/gpt-3.5-turbo"
+    |> Dict.insert "6" "openai/gpt-4-turbo"
+    |> Dict.insert "7" "google/gemini-pro-1.5"
     
-
 
 ## Generate a string to print for the model selection menu
 modelMenuString =
