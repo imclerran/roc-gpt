@@ -44,7 +44,7 @@ main =
     finalState = Task.loop! { model, apiKey, previousMessages: [systemMessage] } proompt
     File.writeBytes! 
         (Path.fromStr "conversation.json") 
-        (buildRequestBody finalSßtate.model finalState.previousMessages)
+        (buildRequestBody finalState.model finalState.previousMessages)
     Stdout.line "\nAssistant: I have been a good chatbot. Goodbye! ^_^"
 
 ## Get the OpenRouter API key from environment variables
