@@ -3,6 +3,8 @@ app [main] {
     json: "https://github.com/lukewilliamboswell/roc-json/releases/download/0.9.0/JI4BuuOuWnD1R3Xcx-F8VrWdj-LM_FfDRB00ekYjIIQ.tar.br",
 }
 
+import cli.File
+import cli.Path
 import cli.Env
 import cli.Http
 import cli.Stdout
@@ -39,7 +41,10 @@ main =
     model = getModelChoice!
     Stdout.line! "Using model: $(model)\n"
     Stdout.line! "Enter your questions below, or type 'Goodbye' to exit"
-    Task.loop! { model, apiKey, previousMessages: [systemMessage] } proompt
+    finalState = Task.loop! { model, apiKey, previousMessages: [systemMessage] } proompt
+    File.writeBytes! 
+        (Path.fromStr "conversation.json") 
+        (buildRequestBody finalSßtate.model finalState.previousMessages)
     Stdout.line "\nAssistant: I have been a good chatbot. Goodbye! ^_^"
 
 ## Get the OpenRouter API key from environment variables
@@ -119,13 +124,17 @@ buildRequestBody : Str, List Message -> List U8
 buildRequestBody = \model, messages ->
     messagesStr =
         messages
-        |> List.map (\{ role, content } -> "{ \"role\": \"$(role)\", \"content\": \"$(encodeContent content)\"}")
+        |> List.map (\{ role, content } -> "{ \"role\": \"$(role)\", \"content\": \"$(encodeContent content)\" }")
         |> Str.joinWith ", "
     "{ \"model\": \"$(model)\", \"messages\": [ $(messagesStr) ] }" |> Str.toUtf8
 
 ## Encode the content of a message by escaping quotes and newlines
 encodeContent : Str -> Str
-encodeContent = \content -> content |> Str.replaceEach "\"" "\\\"" |> Str.replaceEach "\n" "\\n"
+encodeContent = \content -> 
+    content 
+    |> Str.replaceEach "\"" "\\\"" 
+    |> Str.replaceEach "\n" "\\n"
+    |> Str.replaceEach "\t" "\\t"
 
 ## Prompt the user to choose a model and return the selected model
 getModelChoice : Task Str _
